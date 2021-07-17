@@ -18,24 +18,83 @@ function ProfileSidebar(props) {
   )
 }
 
+function ProfileRelationsBox(props) {
+  return (
+    <ProfileRelationsBoxWrapper>
+      <h2 className="smallTitle">
+        {props.title} ({props.items.length})
+      </h2>
+      <ul>
+        {props.items.map(
+          (itemAtual) => {
+            return (
+              <li key={itemAtual.id}>
+                <a href={itemAtual.html_url} target="_blank" key={itemAtual}>
+                  <img src={itemAtual.avatar_url} alt={itemAtual.login} title={itemAtual.login} />
+                  <span>{itemAtual.login}</span>
+                </a>
+              </li>
+            )
+          })}
+      </ul>
+    </ProfileRelationsBoxWrapper>
+  )
+}
+
 export default function Home() {
 
   const githubUser = 'brunogarvas';
-
-  const pessoasFavoritas = [
-    'FelixCoutinho',
-    'juunegreiros',
-    'omariosouto',
-    'peas',
-    'juditecypreste',
-    'asouza'
-  ];
 
   const [comunidades, setComunidades] = React.useState([{
     id: new Date().toISOString(),
     title: 'Eu odeio acordar cedo',
     image: 'https://alurakut.vercel.app/capa-comunidade-01.jpg'
   }]);
+  const [seguidores, setSeguidores] = React.useState([]);
+  const [influenciadores, setInfluenciadores] = React.useState([]);
+
+  React.useEffect(function () {
+    fetch('https://api.github.com/users/peas/followers')
+      .then(function (respostaDoServidor) {
+        return respostaDoServidor.json();
+      }).then(function (respostaCompleta) {
+        console.log(respostaCompleta);
+        setSeguidores(respostaCompleta);
+      });
+
+    fetch('https://api.github.com/users/brunogarvas/following')
+      .then(function (respostaDoServidor) {
+        return respostaDoServidor.json();
+      }).then(function (respostaCompleta) {
+        console.log(respostaCompleta);
+        setInfluenciadores(respostaCompleta);
+      });
+
+    fetch('https://graphql.datocms.com', {
+      method: 'POST',
+      headers: {
+        'Authorization': '3e5477a6ed82d0f658e9f888d4cd1b',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        "query": `query {
+          allCommunities {
+            imageUrl
+            title
+            id
+            creatorSlug
+          }
+        }`
+      })
+    }).then((response) => response.json())
+      .then((respostaCompleta) => {
+        const comunidadesDatoCms = respostaCompleta.data.allCommunities;
+        setComunidades(comunidadesDatoCms);
+        console.log(respostaCompleta)
+      })
+
+  }, []);
 
   return (
     <>
@@ -53,18 +112,33 @@ export default function Home() {
             <OrkutNostalgicIconSet />
           </Box>
           <Box>
-            <h2>O que você deseja fazer?</h2>
+
+            <h2 className="subTitle">O que você deseja fazer?</h2>
+
             <form onSubmit={
               function handleCriarComunidade(e) {
                 e.preventDefault();
                 const dadosDoForm = new FormData(e.target);
                 const comunidade = {
-                  id: new Date().toISOString(),
                   title: dadosDoForm.get('title'),
-                  image: dadosDoForm.get('image')
+                  imageUrl: dadosDoForm.get('image'),
+                  creatorSlug: githubUser,
                 }
-                const comunidadesAtualizadas = [...comunidades, comunidade];
-                setComunidades(comunidadesAtualizadas);
+
+                fetch('/api/comunidades', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(comunidade)
+                }).then(async (response) => {
+                  const dados = await response.json();
+                  console.log(dados.registroCriado);
+                  const comunidade = dados.registroCriado;
+                  const comunidadesAtualizadas = [...comunidades, comunidade];
+                  setComunidades(comunidadesAtualizadas);
+                });
+
               }
             }>
               <div>
@@ -88,39 +162,30 @@ export default function Home() {
           </Box>
         </div>
         <div className="profileRelationsArea" style={{ gridArea: 'profileRelationsArea' }}>
+
           <ProfileRelationsBoxWrapper>
+            <h2 className="smallTitle">
+              Comunidades ({comunidades.length})
+            </h2>
             <ul>
               {comunidades.map(
                 (itemAtual) => {
                   return (
                     <li key={itemAtual.id}>
                       <a href={`/users/${itemAtual}`} key={itemAtual}>
-                        <img src={itemAtual.image} />
-                        <spam>{itemAtual.title}</spam>
+                        <img src={itemAtual.imageUrl} />
+                        <span>{itemAtual.title}</span>
                       </a>
                     </li>
                   )
                 })}
             </ul>
           </ProfileRelationsBoxWrapper>
-          <ProfileRelationsBoxWrapper>
-            <h2 className="smallTitle">
-              Pessoas da Comunidade ({pessoasFavoritas.length})
-            </h2>
-            <ul>
-              {pessoasFavoritas.map(
-                (itemAtual) => {
-                  return (
-                    <li key={itemAtual}>
-                      <a href={`/users/${itemAtual}`} key={itemAtual}>
-                        <img src={`https://github.com/${itemAtual}.png`} />
-                        <spam>{itemAtual}</spam>
-                      </a>
-                    </li>
-                  )
-                })}
-            </ul>
-          </ProfileRelationsBoxWrapper>
+
+          <ProfileRelationsBox title="Influenciadores" items={influenciadores} />
+
+          <ProfileRelationsBox title="Seguidores" items={seguidores} />
+
         </div>
       </MainGrid>
     </>
