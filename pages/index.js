@@ -1,4 +1,6 @@
 import React from 'react';
+import nookies from 'nookies';
+import jwt from 'jsonwebtoken';
 import MainGrid from '../src/components/MainGrid'
 import Box from '../src/components/Box'
 import { AlurakutMenu, AlurakutProfileSidebarMenuDefault, OrkutNostalgicIconSet } from '../src/lib/AlurakutCommons'
@@ -41,9 +43,9 @@ function ProfileRelationsBox(props) {
   )
 }
 
-export default function Home() {
+export default function Home(props) {
 
-  const githubUser = 'brunogarvas';
+  const githubUser = props.githubUser;
 
   const [comunidades, setComunidades] = React.useState([{
     id: new Date().toISOString(),
@@ -54,7 +56,7 @@ export default function Home() {
   const [influenciadores, setInfluenciadores] = React.useState([]);
 
   React.useEffect(function () {
-    fetch('https://api.github.com/users/peas/followers')
+    fetch(`https://api.github.com/users/${githubUser}/followers`)
       .then(function (respostaDoServidor) {
         return respostaDoServidor.json();
       }).then(function (respostaCompleta) {
@@ -62,7 +64,7 @@ export default function Home() {
         setSeguidores(respostaCompleta);
       });
 
-    fetch('https://api.github.com/users/brunogarvas/following')
+    fetch(`https://api.github.com/users/${githubUser}/following`)
       .then(function (respostaDoServidor) {
         return respostaDoServidor.json();
       }).then(function (respostaCompleta) {
@@ -190,4 +192,31 @@ export default function Home() {
       </MainGrid>
     </>
   );
+}
+
+export async function getServerSideProps(context) {
+  const cookies = nookies.get(context);
+  const token = cookies.USER_TOKEN;
+
+  const { isAuthenticated } = await fetch('https://alurakut.vercel.app/api/auth', {
+    headers: {
+      Authorization: token,
+    }
+  }).then((resposta) => resposta.json());
+
+  if (!isAuthenticated) {
+    return {
+      redirect: {
+        destination: '/login'
+      }
+    }
+  }
+
+  const { githubUser } = jwt.decode(token);
+  return {
+    props: {
+      githubUser
+    },
+  }
+
 }
