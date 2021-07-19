@@ -27,17 +27,21 @@ function ProfileRelationsBox(props) {
         {props.title} ({props.items.length})
       </h2>
       <ul>
-        {props.items.map(
-          (itemAtual) => {
-            return (
-              <li key={itemAtual.id}>
-                <a href={itemAtual.html_url} target="_blank" key={itemAtual}>
-                  <img src={itemAtual.avatar_url} alt={itemAtual.login} title={itemAtual.login} />
-                  <span>{itemAtual.login}</span>
-                </a>
-              </li>
-            )
-          })}
+        {
+          props.items && props.items.length ? (
+            props.items.map(
+              (itemAtual) => {
+                return (
+                  <li key={itemAtual.id}>
+                    <a href={itemAtual.html_url} target="_blank" key={itemAtual}>
+                      <img src={itemAtual.avatar_url} alt={itemAtual.login} title={itemAtual.login} />
+                      <span>{itemAtual.login}</span>
+                    </a>
+                  </li>
+                )
+              })
+          ) : ""
+        }
       </ul>
     </ProfileRelationsBoxWrapper>
   )
@@ -169,19 +173,25 @@ export default function Home(props) {
             <h2 className="smallTitle">
               Comunidades ({comunidades.length})
             </h2>
-            <ul>
-              {comunidades.map(
-                (itemAtual) => {
-                  return (
-                    <li key={itemAtual.id}>
-                      <a href={`/users/${itemAtual}`} key={itemAtual}>
-                        <img src={itemAtual.imageUrl} />
-                        <span>{itemAtual.title}</span>
-                      </a>
-                    </li>
-                  )
-                })}
-            </ul>
+            {
+              comunidades && comunidades.length ? (
+                <ul>
+                  {
+                    comunidades.map(
+                      (itemAtual) => {
+                        return (
+                          <li key={itemAtual.id}>
+                            <a href={`/users/${itemAtual}`} key={itemAtual}>
+                              <img src={itemAtual.imageUrl} />
+                              <span>{itemAtual.title}</span>
+                            </a>
+                          </li>
+                        )
+                      })
+                  }
+                </ul>
+              ) : ""
+            }
           </ProfileRelationsBoxWrapper>
 
           <ProfileRelationsBox title="Influenciadores" items={influenciadores} />
@@ -200,14 +210,18 @@ export async function getServerSideProps(context) {
 
   const { isAuthenticated } = await fetch('https://alurakut.vercel.app/api/auth', {
     headers: {
-      Authorization: token,
+      Authorization: token
     }
-  }).then((resposta) => resposta.json());
+  })
+    .then((resposta) => resposta.json());
+
+  console.log(isAuthenticated);
 
   if (!isAuthenticated) {
     return {
       redirect: {
-        destination: '/login'
+        destination: '/login',
+        permanent: false,
       }
     }
   }
